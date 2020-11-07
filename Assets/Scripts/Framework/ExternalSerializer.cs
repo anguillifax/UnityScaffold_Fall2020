@@ -3,17 +3,15 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace Momentum {
+namespace Scaffold
+{
+	// An industrial strength tool for serializing objects into Json format.
 
 	/// <summary>
 	/// Encapsulates the process of reading and writing objects into a specified folder.
 	/// </summary>
-	public class ExternalSerializer {
-
-		// ================
-		// Public Interface
-		// ================
-
+	public class ExternalSerializer
+	{
 		/// <summary>
 		/// The working folder that this serializer reads and writes to.
 		/// 
@@ -26,7 +24,8 @@ namespace Momentum {
 		public string BasePath { get; }
 
 		/// <summary>
-		/// Creates a new serializer and sets where the serializer will read and write to.
+		/// Creates a new serializer and sets where the serializer will read
+		/// and write to.
 		/// 
 		/// <para>
 		/// If the folder does not exist, it will be created. If the folder
@@ -66,7 +65,8 @@ namespace Momentum {
 		}
 
 		/// <summary>
-		/// Serialize an object to a file in the working folder, replacing an existing file if it exists.
+		/// Serialize an object to a file in the working folder, replacing an
+		/// existing file if it exists.
 		/// 
 		/// <para>
 		/// This function gives the strong guarantee. If serialization fails
@@ -86,32 +86,43 @@ namespace Momentum {
 		/// <param name="filename">Name of the file to serialize the object to.</param>
 		public void Serialize<T>(T item, string filename)
 		{
-			if (item == null) {
+			if (item == null)
+			{
 				throw new ArgumentNullException("ExternalSerializer: Cannot serialize null object.");
 			}
 
 			string finalPath = GetPath(filename);
 			string tmpPath = finalPath + TempSuffix;
 
-			try {
+			try
+			{
 				using (StreamWriter sw = new StreamWriter(tmpPath))
-				using (JsonWriter writer = new JsonTextWriter(sw)) {
-					try {
+				using (JsonWriter writer = new JsonTextWriter(sw))
+				{
+					try
+					{
 						DefaultSerializer.Serialize(writer, item);
-					} catch (JsonException e) {
+					}
+					catch (JsonException e)
+					{
 						// Hide JSON implementation details.
 						throw new Exception(e.Message);
 					}
 				}
-			} catch {
+			}
+			catch
+			{
 				File.Delete(finalPath);
 				throw;
 			}
 
-			try {
+			try
+			{
 				File.Delete(finalPath);
 				File.Move(tmpPath, finalPath);
-			} catch {
+			}
+			catch
+			{
 				File.Delete(finalPath);
 				throw;
 			}
@@ -131,22 +142,23 @@ namespace Momentum {
 		public T Deserialize<T>(string filename)
 		{
 			using (StreamReader sr = new StreamReader(GetPath(filename)))
-			using (JsonReader reader = new JsonTextReader(sr)) {
-				try {
+			using (JsonReader reader = new JsonTextReader(sr))
+			{
+				try
+				{
 					return DefaultSerializer.Deserialize<T>(reader);
-				} catch (JsonException e) {
+				}
+				catch (JsonException e)
+				{
 					// Hide JSON implementation details.
 					throw new Exception(e.Message);
 				}
 			}
 		}
 
-		// ======================
-		// Private Implementation
-		// ======================
-
 		private const string TempSuffix = ".tmp~";
-		private static readonly JsonSerializer DefaultSerializer = new JsonSerializer() {
+		private static readonly JsonSerializer DefaultSerializer = new JsonSerializer()
+		{
 			Formatting = Formatting.Indented,
 		};
 
@@ -162,7 +174,8 @@ namespace Momentum {
 
 		// None of these types can be serialized using the default Json serializer without throwing an exception.
 
-		private class Convert_Vector2 : JsonConverter<Vector2> {
+		private class Convert_Vector2 : JsonConverter<Vector2>
+		{
 			public override Vector2 ReadJson(JsonReader reader, Type objectType, Vector2 existingValue, bool hasExistingValue, JsonSerializer serializer)
 			{
 				var v = new Vector2(
@@ -181,7 +194,8 @@ namespace Momentum {
 			}
 		}
 
-		private class Convert_Vector3 : JsonConverter<Vector3> {
+		private class Convert_Vector3 : JsonConverter<Vector3>
+		{
 			public override Vector3 ReadJson(JsonReader reader, Type objectType, Vector3 existingValue, bool hasExistingValue, JsonSerializer serializer)
 			{
 				var v = new Vector3(
@@ -202,7 +216,8 @@ namespace Momentum {
 			}
 		}
 
-		private class Convert_Vector4 : JsonConverter<Vector4> {
+		private class Convert_Vector4 : JsonConverter<Vector4>
+		{
 			public override Vector4 ReadJson(JsonReader reader, Type objectType, Vector4 existingValue, bool hasExistingValue, JsonSerializer serializer)
 			{
 				var v = new Vector4(
@@ -225,7 +240,8 @@ namespace Momentum {
 			}
 		}
 
-		private class Convert_Quaternion : JsonConverter<Quaternion> {
+		private class Convert_Quaternion : JsonConverter<Quaternion>
+		{
 			public override Quaternion ReadJson(JsonReader reader, Type objectType, Quaternion existingValue, bool hasExistingValue, JsonSerializer serializer)
 			{
 				Quaternion q = new Quaternion(
@@ -252,11 +268,11 @@ namespace Momentum {
 
 		private string GetPath(string add)
 		{
-			if (add == null) {
+			if (add == null)
+			{
 				throw new ArgumentNullException("ExternalSerializer: Filename cannot be null");
 			}
 			return Path.Combine(BasePath, add);
 		}
 	}
-
 }
