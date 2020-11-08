@@ -17,7 +17,8 @@ namespace Scaffold
 			public ManualTimer timer;
 		}
 
-		public List<AnimationTimerPair> dilations = new List<AnimationTimerPair>();
+		public List<TimedAnimationCurve> timed = new List<TimedAnimationCurve>();
+		public List<DirectTimeDilation> directs = new List<DirectTimeDilation>();
 		public bool paused;
 
 		private void Awake()
@@ -49,9 +50,13 @@ namespace Scaffold
 			else
 			{
 				float value = 1f;
-				foreach (var x in dilations)
+				foreach (var x in timed)
 				{
-					value *= x.curve.Evaluate(x.timer.ElapsedTime);
+					value *= x.Current;
+				}
+				foreach (var x in directs)
+				{
+					value *= x.factor;
 				}
 				Time.timeScale = value;
 			}
@@ -59,8 +64,8 @@ namespace Scaffold
 
 		private void Update()
 		{
-			dilations.ForEach(x => x.timer.Update(Time.unscaledDeltaTime));
-			dilations.RemoveAll(x => x.timer.Done);
+			timed.ForEach(x => x.timer.Update(Time.unscaledDeltaTime));
+			timed.RemoveAll(x => x.timer.Done);
 			UpdateTimescale();
 		}
 
@@ -68,16 +73,22 @@ namespace Scaffold
 
 		internal void BeginDilation(AnimationCurve curve)
 		{
-			dilations.Add(new AnimationTimerPair()
-			{
-				curve = curve,
-				timer = new ManualTimer(curve.keys[curve.length - 1].time)
-			});
+			timed.Add(new TimedAnimationCurve(curve));
+		}
+
+		internal void AddDilation(DirectTimeDilation dilation)
+		{
+			directs.Add(dilation);
+		}
+
+		internal void RemoveDilation(DirectTimeDilation dilation)
+		{
+			directs.Remove(dilation);
 		}
 
 		internal void ResetEffects()
 		{
-			dilations.Clear();
+			timed.Clear();
 			UpdateTimescale();
 		}
 

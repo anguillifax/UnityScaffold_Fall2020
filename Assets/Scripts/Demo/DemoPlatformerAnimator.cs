@@ -4,22 +4,12 @@ using UnityEngine;
 
 namespace Scaffold.Demo
 {
-	// This enum lists the name of each animation clip.
-	//
-	// Each value must correspond *exactly* with the name of the animation
-	// clip, otherwise the animator will reject the clip name.
-	//
-	// This provides a typesafe public interface.
-
-	public enum DemoPlatformerAnimationId
-	{
-		Idle, Run, Jump, Dash
-	}
-
 	internal class DemoPlatformerAnimator : MonoBehaviour
 	{
 		private SpriteRenderer sr;
 		private Animator anim;
+
+		public GameObject diePrefab = default;
 
 		private void Awake()
 		{
@@ -31,6 +21,11 @@ namespace Scaffold.Demo
 		{
 			anim.Play(clip.ToString());
 			sr.flipX = !facingRight;
+		}
+
+		public void PlayDieAnimation()
+		{
+			Instantiate(diePrefab, transform.position, transform.rotation);
 		}
 	}
 }

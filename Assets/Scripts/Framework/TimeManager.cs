@@ -19,6 +19,15 @@ namespace Scaffold
 	// calls directly to the implementation, where they can be handled
 	// properly.
 
+	/// <summary>
+	/// Allows manual control over the current timescale.
+	/// </summary>
+	[Serializable]
+	public class DirectTimeDilation
+	{
+		[Min(0)] public float factor = 0.7f;
+	}
+
 	public static class TimeManager
 	{
 		// References to the MonoBehaviour that provides the implementation of
@@ -44,9 +53,19 @@ namespace Scaffold
 		/// Begins a new effect. The duration of the effect is equivalent to
 		/// the duration of the animation curve.
 		/// </summary>
-		public static void BeginTimeDilation(AnimationCurve dilation)
+		public static void AddTimedDilation(AnimationCurve dilation)
 		{
 			impl.BeginDilation(dilation);
+		}
+
+		public static void AddDirectDilation(DirectTimeDilation dilation)
+		{
+			impl.AddDilation(dilation);
+		}
+
+		public static void RemoveDirectDilation(DirectTimeDilation dilation)
+		{
+			impl.RemoveDilation(dilation);
 		}
 
 		/// <summary>

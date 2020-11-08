@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.InputSystem;
+﻿using UnityEngine;
 
 namespace Scaffold.Demo
 {
-	internal class DemoPlatformerPlayer : MonoBehaviour
+	// monolithic architecture. requires least understanding of c# classes. todo
+
+	internal class DemoPlatformerPlayer : MonoBehaviour, IDemoPlayerDamageTarget
 	{
 		public enum State
 		{
-			Run, Jump, Dash, Die
+			Run, Jump, Dash
 		}
 
 		[Header("Common")]
@@ -30,10 +29,21 @@ namespace Scaffold.Demo
 
 		[Header("Dash")]
 		public ManualTimer dashTimer = new ManualTimer();
+		// Animation curves are a simple and versatile way to change a value
+		// over time. Using an animation curve allows quick iteration in the
+		// editor and vast flexibility over possible inputs.
+		[Tooltip("Normalized from [0, 1] over total duration of dash")]
 		public AnimationCurve dashVel = AnimationCurve.Linear(0, 0, 1, 1);
 		public float dashDecayAccel = 30;
+		public AnimationCurve dashScreenshake = default;
+		public AnimationCurve dashTimeSlow = default;
+
+		[Header("Die")]
+		public AnimationCurve dieScreenshake = default;
 
 		private Vector2 velocity;
+		private Vector2 dashDecayVel;
+		private Vector2 dashDir;
 		private DemoPlatformerInputState input;
 
 		private Rigidbody2D body;
@@ -92,7 +102,7 @@ namespace Scaffold.Demo
 
 			if (inp.Attack.triggered)
 			{
-				input.jump.Store();
+				input.dash.Store();
 			}
 		}
 
@@ -175,6 +185,11 @@ namespace Scaffold.Demo
 			{
 				BeginStateJump();
 			}
+
+			if (input.dash.PeekThenClear())
+			{
+				BeginStateDash();
+			}
 		}
 
 		private void BeginStateJump()
@@ -187,11 +202,56 @@ namespace Scaffold.Demo
 		private void StateJump()
 		{
 			jumpTimer.Update(Time.fixedDeltaTime);
+
 			if (jumpTimer.Running && input.jumpHeld)
 			{
 				velocity.y = jumpVel;
 			}
 			else
+			{
+				BeginStateRun();
+			}
+
+			if (input.dash.PeekThenClear())
+			{
+				BeginStateDash();
+			}
+		}
+
+		private void BeginStateDash()
+		{
+			state = State.Dash;
+			dashTimer.Start();
+			dashDecayVel = velocity;
+			dashDir = new Vector2(input.lastHorz, 0).normalized;
+			DemoCameraController.instance.screenshake.AddTimedShake(dashScreenshake);
+			TimeManager.AddTimedDilation(dashTimeSlow);
+		}
+
+		private void StateDash()
+		{
+			// This design pattern simplifies working with complicated velocity
+			// changes.
+			//
+			// The pattern splits apart the original velocity into multiple
+			// pieces. Each piece is stored and manipulated individually. At
+			// the end, each component piece is recombined to form the output
+			// velocity.
+			//
+			// A typical example may combine previous velocity, current axis
+			// input, and velocity from a curve.
+
+			// Feather in the previous velocity
+			dashDecayVel = Vector2.MoveTowards(dashDecayVel, Vector2.zero, dashDecayAccel * Time.fixedDeltaTime);
+
+			// Calculate raw dash velocity
+			dashTimer.Update(Time.fixedDeltaTime);
+			Vector2 curveOutput = dashVel.Evaluate(dashTimer.NormalizedProgress) * dashDir;
+
+			// Blend together for smooth output
+			velocity = dashDecayVel + curveOutput;
+
+			if (dashTimer.Done)
 			{
 				BeginStateRun();
 			}
@@ -204,27 +264,47 @@ namespace Scaffold.Demo
 
 			CheckIfLeftGround();
 
+			// Update appropriate state in state machine
 			switch (state)
 			{
 				case State.Run: StateRun(); break;
 				case State.Jump: StateJump(); break;
-				case State.Dash:
-					break;
-				case State.Die:
-					break;
+				case State.Dash: StateDash(); break;
 			}
 
 			// Apply the results of the state machine.
 			body.velocity = velocity;
 		}
 
+		private void KillPlayer()
+		{
+			// Destroying the player is the easiest, safest way of stopping
+			// gameplay logic and preventing unusual side-effects.
+
+			anim.PlayDieAnimation();
+			DemoCameraController.instance.screenshake.AddTimedShake(dieScreenshake);
+			Destroy(gameObject);
+		}
+
 		// =========================================================
-		// Callbacks
+		// Physics Callbacks
 		// =========================================================
 
 		private void OnCollisionEnter2D(Collision2D collision)
 		{
 			CheckIfTouchedGround(collision);
+		}
+
+		// =========================================================
+		// Interfaces
+		// =========================================================
+
+		// Explicit interface implementation syntax greatly reduces chance of
+		// errors.
+
+		void IDemoPlayerDamageTarget.Attack()
+		{
+			KillPlayer();
 		}
 	}
 }
